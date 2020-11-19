@@ -96,18 +96,23 @@ import re
 import sys
 
 # "from sp import *" only imports objects for hand written parsers
-__all__ = ['R', 'K', 'C', 'At', 'D', 'Rule', 'Separator']
+__all__ = ["R", "K", "C", "At", "D", "Rule", "Separator"]
+
 
 class _Caches(list):
     def add(self, cache):
         self.append(cache)
+
     def clear(self):
         for cache in self:
             cache.clear()
+
+
 _caches = _Caches()
 
+
 def clean():
-    """ clears the SP internal caches
+    """clears the SP internal caches
 
     >>> clean(); sum(len(cache) for cache in _caches) == 0
     True
@@ -123,53 +128,62 @@ def clean():
     """
     _caches.clear()
 
-def _memoize_self_s_i(f):
-    """ creates a memoized parser method
 
-        arguments self, s and i are memoized.
+def _memoize_self_s_i(f):
+    """creates a memoized parser method
+
+    arguments self, s and i are memoized.
     """
     cache = {}
+
     def _f(self, s, i):
         try:
             r = cache[self, s, i]
         except KeyError:
             r = cache[self, s, i] = f(self, s, i)
         return r
+
     _f.__doc__ = f.__doc__
     _f.__name__ = f.__name__
     _caches.add(cache)
     return _f
 
-def _memoize_self_s_i_e(f):
-    """ creates a memoized parser method
 
-        arguments self, s and i are memoized.
-        The error argument (e) is not indexed.
+def _memoize_self_s_i_e(f):
+    """creates a memoized parser method
+
+    arguments self, s and i are memoized.
+    The error argument (e) is not indexed.
     """
     cache = {}
+
     def _f(self, s, i, e):
         try:
             r = cache[self, s, i]
         except KeyError:
             r = cache[self, s, i] = f(self, s, i, e)
         return r
+
     _f.__doc__ = f.__doc__
     _f.__name__ = f.__name__
     _caches.add(cache)
     return _f
 
+
 class _pos:
-    """ computes the position in a string
-    """
+    """computes the position in a string"""
+
     def __init__(self, s, i):
         self.index = i
-        self.line = s.count('\n', 0, i) + 1
-        self.column = i - s.rfind('\n', 0, i)
-    def __str__(self): return "[%d:%d]"%(self.line, self.column)
+        self.line = s.count("\n", 0, i) + 1
+        self.column = i - s.rfind("\n", 0, i)
+
+    def __str__(self):
+        return "[%d:%d]" % (self.line, self.column)
+
 
 class _err:
-    """ stores the maximal position of the detected errors
-    """
+    """stores the maximal position of the detected errors"""
 
     def __init__(self, i, *ts):
         self.i = i
@@ -181,10 +195,12 @@ class _err:
         elif self.i < other.i:
             return other
         else:
-            return _err(self.i, *(self.ts + tuple(t for t in other.ts if t not in self.ts)))
+            return _err(
+                self.i, *(self.ts + tuple(t for t in other.ts if t not in self.ts))
+            )
 
     def msg(self, s):
-        """ returns a message with the location of the error
+        """returns a message with the location of the error
 
         >>> num = R('\d+')
         >>> ident = R('\w+')
@@ -201,17 +217,20 @@ class _err:
         SyntaxError: [1:7] expected: \d+ \w+...
         """
         p = _pos(s, self.i)
-        msg = "[%d:%d] expected:"%(p.line, p.column)
+        msg = "[%d:%d] expected:" % (p.line, p.column)
         for t in self.ts:
-            if t.startswith(r'\b'): t = t[2:]
-            if t.endswith(r'\b'): t = t[:-2]
-            msg += " "+t
+            if t.startswith(r"\b"):
+                t = t[2:]
+            if t.endswith(r"\b"):
+                t = t[:-2]
+            msg += " " + t
         err = SyntaxError(msg)
         err.lineno = p.line
         return err
 
+
 def _p(obj):
-    """ converts 'obj' to a parser object
+    """converts 'obj' to a parser object
 
     A parser is not changed:
     >>> word = K('Ham') | K('Spam')
@@ -236,19 +255,22 @@ def _p(obj):
         ...
     TypeError: None is not a valid parser
     """
-    if isinstance(obj, Parser): return obj
-    if isinstance(obj, str): return K(obj)
-    raise TypeError("%s is not a valid parser"%obj)
+    if isinstance(obj, Parser):
+        return obj
+    if isinstance(obj, str):
+        return K(obj)
+    raise TypeError("%s is not a valid parser" % obj)
+
 
 class Parser:
-    """ A parser shall have a parse method that:
-        - trims separator before and after parsing (to allow different
-            separators in a single parser)
-        - recursively calls the child parsers
-        - returns a tuple (value, index, error) in case of success
-            if value is nil, it will be later ignored
-        - returns a tuple (fail, "initial index", error) in case of failure
-        error is the latest error detected.
+    """A parser shall have a parse method that:
+    - trims separator before and after parsing (to allow different
+        separators in a single parser)
+    - recursively calls the child parsers
+    - returns a tuple (value, index, error) in case of success
+        if value is nil, it will be later ignored
+    - returns a tuple (fail, "initial index", error) in case of failure
+    error is the latest error detected.
     """
 
     def __init__(self):
@@ -256,7 +278,7 @@ class Parser:
         self.separator = _separator
 
     def __call__(self, s):
-        """ removes separators before and after parsing and returns the object parsed
+        """removes separators before and after parsing and returns the object parsed
 
         >>> with Separator(r'\s+'):
         ...     num = R('\d+') / int
@@ -284,20 +306,22 @@ class Parser:
 
     @_memoize_self_s_i
     def skipsep(self, s, i):
-        """ removes separators from a string
+        """removes separators from a string
 
         >>> with Separator(r'\s'):
         ...     p = Parser()
         >>> p.skipsep("   spam   ", 0)
         3
         """
-        if self.separator is None: return i
+        if self.separator is None:
+            return i
         while True:
             sep, i, e = self.separator.parse(s, i, _err(i))
-            if sep is fail: return i
+            if sep is fail:
+                return i
 
     def __and__(self, other):
-        """ returns a sequence parser
+        """returns a sequence parser
 
         >>> with Separator(" "): ab = R("a") & "b"
         >>> ab.parse("a b c", 0, _err(0))[:2]
@@ -308,7 +332,7 @@ class Parser:
         return And(self, other)
 
     def __rand__(self, other):
-        """ returns a sequence parser
+        """returns a sequence parser
 
         >>> with Separator(" "): ab = "a" & R("b")
         >>> ab.parse("a b c", 0, _err(0))[:2]
@@ -319,7 +343,7 @@ class Parser:
         return And(other, self)
 
     def __or__(self, other):
-        """ returns an alternative parser
+        """returns an alternative parser
 
         >>> with Separator(" "): ab = R("a") | "b"
         >>> ab.parse("a b c", 0, _err(0))[:2]
@@ -332,7 +356,7 @@ class Parser:
         return Or(self, other)
 
     def __ror__(self, other):
-        """ returns an alternative parser
+        """returns an alternative parser
 
         >>> with Separator(" "): ab = "a" | R("b")
         >>> ab.parse("a b c", 0, _err(0))[:2]
@@ -345,7 +369,7 @@ class Parser:
         return Or(other, self)
 
     def __getitem__(self, slice):
-        """ returns a repetition parser
+        """returns a repetition parser
 
         Repetition is a slice:
             - start is the minimal occurrence number (default is 0)
@@ -364,7 +388,7 @@ class Parser:
         return Rep(self, slice.start, slice.stop, slice.step)
 
     def __truediv__(self, func):
-        """ returns a parser that applies a function to the result of another parser
+        """returns a parser that applies a function to the result of another parser
 
         The argument of the function is a single object.
 
@@ -377,10 +401,11 @@ class Parser:
         return Apply(self, func)
 
     # Python 2 fallback
-    if sys.version_info[0] < 3: __div__ = __truediv__
+    if sys.version_info[0] < 3:
+        __div__ = __truediv__
 
     def __mul__(self, func):
-        """ returns a parser that applies a function to the result of another parser
+        """returns a parser that applies a function to the result of another parser
 
         The arguments of the function are in a list or a tuple,
         each item being given to the function as a separate argument.
@@ -393,8 +418,9 @@ class Parser:
         """
         return ApplyStar(self, func)
 
+
 class Separator:
-    """ defines the current separator
+    """defines the current separator
 
     A classical usage is to define tokens outside a separator block
     and rules inside a separator block (for instance to discard spaces and comments).
@@ -413,8 +439,10 @@ class Separator:
     """
 
     def __init__(self, parser=None):
-        if isinstance(parser, str): parser = R(parser)
-        elif parser is not None: parser = _p(parser)
+        if isinstance(parser, str):
+            parser = R(parser)
+        elif parser is not None:
+            parser = _p(parser)
         self.parser = parser
 
     def __enter__(self):
@@ -426,10 +454,12 @@ class Separator:
         global _separator
         _separator = self.previous_parser
 
+
 _separator = None
 
+
 class R(Parser):
-    """ is a single token parser
+    """is a single token parser
 
     The token is defined by a regular expression.
     The token returns the string matched by the regular expression.
@@ -461,18 +491,21 @@ class R(Parser):
     def parse(self, s, i, e):
         i1 = self.skipsep(s, i)
         token = self.re.match(s, i1)
-        if not token: return fail, i, e.max(_err(i1, self.pattern))
+        if not token:
+            return fail, i, e.max(_err(i1, self.pattern))
         matched = token.group(0)
         if token.lastindex:
             value = token.groups()
-            if len(value) == 1: value = value[0]
+            if len(value) == 1:
+                value = value[0]
         else:
             value = matched
         rest = self.skipsep(s, i1 + len(matched))
         return value, rest, e.max(_err(rest))
 
+
 class K(R):
-    """ is a keyword parser
+    """is a keyword parser
 
     Works a bit as R.
 
@@ -491,17 +524,22 @@ class K(R):
     def __init__(self, pattern, flags=0, name=None):
         Parser.__init__(self)
         self.pattern = name or pattern
-        if pattern.isalnum(): pattern = r"\b%s\b"%pattern
-        else: pattern = re.escape(pattern)
+        if pattern.isalnum():
+            pattern = r"\b%s\b" % pattern
+        else:
+            pattern = re.escape(pattern)
         self.re = re.compile(pattern, flags)
 
     def parse(self, s, i, e):
         obj, rest, e = R.parse(self, s, i, e)
-        if obj is fail: return fail, rest, e
-        else: return nil, rest, e
+        if obj is fail:
+            return fail, rest, e
+        else:
+            return nil, rest, e
+
 
 class C(Parser):
-    """ is a constant parser
+    """is a constant parser
 
     C parses nothing, simply returns a constant.
 
@@ -518,8 +556,9 @@ class C(Parser):
         i = self.skipsep(s, i)
         return self.val, i, e.max(_err(i))
 
+
 class At(Parser):
-    r""" returns the current position
+    r"""returns the current position
 
     >>> with Separator('\s'): p = K('a')[:] & At() & 'b'
     >>> p = p * (lambda a, p: (p.index, p.line, p.column))
@@ -541,8 +580,9 @@ class At(Parser):
         i = self.skipsep(s, i)
         return _pos(s, i), i, e.max(_err(i))
 
+
 class D(Parser):
-    """ parses something and replaces the value by 'nil'
+    """parses something and replaces the value by 'nil'
 
     Used to discard some items returned by a sequence parser.
     The sequence parser will ignore 'nil' items.
@@ -564,12 +604,14 @@ class D(Parser):
     def parse(self, s, i, e):
         rest = self.skipsep(s, i)
         x, rest, e = self.parser.parse(s, rest, e)
-        if x is fail: return fail, i, e.max(_err(rest))
+        if x is fail:
+            return fail, i, e.max(_err(rest))
         rest = self.skipsep(s, rest)
         return nil, rest, e.max(_err(rest))
 
+
 class And(Parser):
-    """ parses a sequence.
+    """parses a sequence.
 
     Takes parsers as arguments.
     If these arguments are also sequences, the sequence is flatten.
@@ -602,8 +644,10 @@ class And(Parser):
         Parser.__init__(self)
         self.items = []
         for parser in parsers:
-            if isinstance(parser, And): self.items.extend(parser.items)
-            else: self.items.append(_p(parser))
+            if isinstance(parser, And):
+                self.items.extend(parser.items)
+            else:
+                self.items.append(_p(parser))
 
     @_memoize_self_s_i_e
     def parse(self, s, i, e):
@@ -611,20 +655,30 @@ class And(Parser):
         rest = self.skipsep(s, i)
         for item in self.items:
             token, rest, e = item.parse(s, rest, e)
-            if token is fail: return fail, i, e.max(_err(rest))
-            if token is not nil: tokens.append(token)
+            if token is fail:
+                return fail, i, e.max(_err(rest))
+            if token is not nil:
+                tokens.append(token)
             rest = self.skipsep(s, rest)
-        if len(tokens) == 1: return tokens[0], rest, e.max(_err(rest))
+        if len(tokens) == 1:
+            return tokens[0], rest, e.max(_err(rest))
         return tuple(tokens), rest, e.max(_err(rest))
 
+
 class _Singleton:
-    def __init__(self, name): self.name = name
-    def __repr__(self): return self.name
+    def __init__(self, name):
+        self.name = name
+
+    def __repr__(self):
+        return self.name
+
+
 nil = _Singleton("nil")
 fail = _Singleton("fail")
 
+
 class Or(Parser):
-    """ parses an alternative.
+    """parses an alternative.
 
     Takes parsers as arguments.
     If these arguments are also alternatives, the alternative is flatten.
@@ -663,8 +717,10 @@ class Or(Parser):
         Parser.__init__(self)
         self.items = []
         for parser in parsers:
-            if isinstance(parser, Or): self.items.extend(parser.items)
-            else: self.items.append(_p(parser))
+            if isinstance(parser, Or):
+                self.items.extend(parser.items)
+            else:
+                self.items.append(_p(parser))
 
     @_memoize_self_s_i_e
     def parse(self, s, i, e):
@@ -684,8 +740,9 @@ class Or(Parser):
         else:
             return fail, i, e
 
+
 class Rule(Parser):
-    """ returns an empty parser that can be later enriched.
+    """returns an empty parser that can be later enriched.
 
     Used to define recursive rules.
     The symbol can be used even before the rule is defined.
@@ -704,19 +761,23 @@ class Rule(Parser):
         self.parser = None
 
     def __ior__(self, parser):
-        if self.parser is None: self.parser = _p(parser)
-        else: self.parser = Or(self.parser, parser)
+        if self.parser is None:
+            self.parser = _p(parser)
+        else:
+            self.parser = Or(self.parser, parser)
         return self
 
     def parse(self, s, i, e):
         i1 = self.skipsep(s, i)
         x, rest, e = self.parser.parse(s, i1, e)
-        if x is fail: return fail, i, e.max(_err(rest))
+        if x is fail:
+            return fail, i, e.max(_err(rest))
         rest = self.skipsep(s, rest)
         return x, rest, e.max(_err(rest))
 
+
 class Rep(Parser):
-    """ parses repetitions.
+    """parses repetitions.
 
     Arguments:
         min is the minimal number of iterations (default is 0)
@@ -767,11 +828,14 @@ class Rep(Parser):
     def __init__(self, parser, min, max, sep):
         Parser.__init__(self)
         self.parser = parser
-        if min is None: min = 0
-        if max is None: max = -1
+        if min is None:
+            min = 0
+        if max is None:
+            max = -1
         self.min = min
         self.max = max
-        if sep is None: self.parse = self._parse_no_sep
+        if sep is None:
+            self.parse = self._parse_no_sep
         else:
             self.parse = self._parse_with_sep
             self.sep = _p(sep)
@@ -784,7 +848,8 @@ class Rep(Parser):
             n += 1
             item, rest, e = self.parser.parse(s, rest, e)
             if item is fail:
-                if n <= self.min: return fail, i, e.max(_err(rest))
+                if n <= self.min:
+                    return fail, i, e.max(_err(rest))
                 return items, rest, e.max(_err(rest))
             items.append(item)
             rest = self.skipsep(s, rest)
@@ -794,7 +859,8 @@ class Rep(Parser):
         rest = self.skipsep(s, i)
         item, rest, e = self.parser.parse(s, rest, e)
         if item is fail:
-            if 1 <= self.min: return fail, i, e.max(_err(rest))
+            if 1 <= self.min:
+                return fail, i, e.max(_err(rest))
             rest = self.skipsep(s, rest)
             return [], rest, e.max(_err(rest))
         items = [item]
@@ -804,19 +870,22 @@ class Rep(Parser):
             n += 1
             sep, rest, e = self.sep.parse(s, rest, e)
             if sep is fail:
-                if n <= self.min: return fail, i, e.max(_err(rest))
+                if n <= self.min:
+                    return fail, i, e.max(_err(rest))
                 return items, rest, e.max(_err(rest))
             rest = self.skipsep(s, rest)
             item, rest, e = self.parser.parse(s, rest, e)
             if item is fail:
-                if n <= self.min: return fail, i, e.max(_err(rest))
+                if n <= self.min:
+                    return fail, i, e.max(_err(rest))
                 return items, rest, e.max(_err(rest))
             items.append(item)
             rest = self.skipsep(s, rest)
         return items, rest, e.max(_err(rest))
 
+
 class Apply(Parser):
-    """ applies a function to the result of a parser
+    """applies a function to the result of a parser
 
     The function has one argument.
 
@@ -838,12 +907,14 @@ class Apply(Parser):
     def parse(self, s, i, e):
         i1 = self.skipsep(s, i)
         token, rest, e = self.parser.parse(s, i1, e)
-        if token is fail: return fail, i, e.max(_err(rest))
+        if token is fail:
+            return fail, i, e.max(_err(rest))
         rest = self.skipsep(s, rest)
         return self.func(token), rest, e.max(_err(rest))
 
+
 class ApplyStar(Apply):
-    """ applies a function to the result of some parsers
+    """applies a function to the result of some parsers
 
     The function may have several arguments.
 
@@ -860,12 +931,14 @@ class ApplyStar(Apply):
     def parse(self, s, i, e):
         i1 = self.skipsep(s, i)
         token, rest, e = self.parser.parse(s, i1, e)
-        if token is fail: return fail, i, e.max(_err(rest))
+        if token is fail:
+            return fail, i, e.max(_err(rest))
         rest = self.skipsep(s, rest)
         return self.func(*token), rest, e.max(_err(rest))
 
+
 def _compile_string(source, frame):
-    r""" defines a parser from a grammar
+    r"""defines a parser from a grammar
 
     Token definition
     ----------------
@@ -1065,62 +1138,102 @@ def _compile_string(source, frame):
     """
 
     class _Ident:
-        def __init__(self, name): self.name = name
-        def gen(self, symbs): return symbs[self.name]
+        def __init__(self, name):
+            self.name = name
+
+        def gen(self, symbs):
+            return symbs[self.name]
 
     class _Re:
-        def __init__(self, name, expr): self.name, self.expr = name, expr[1:-1]
-        def gen(self, symbs): return R(self.expr, flags=symbs.lexer, name=self.name)
+        def __init__(self, name, expr):
+            self.name, self.expr = name, expr[1:-1]
+
+        def gen(self, symbs):
+            return R(self.expr, flags=symbs.lexer, name=self.name)
 
     class _Kw:
-        def __init__(self, name, val): self.name, self.val = name, val[1:-1]
-        def gen(self, symbs): return K(self.val, flags=symbs.lexer, name=self.name)
+        def __init__(self, name, val):
+            self.name, self.val = name, val[1:-1]
+
+        def gen(self, symbs):
+            return K(self.val, flags=symbs.lexer, name=self.name)
 
     class _At:
-        def gen(self, symbs): return At()
+        def gen(self, symbs):
+            return At()
 
     class _Rep0N:
-        def __init__(self, expr): self.expr = expr
-        def gen(self, symbs): return self.expr.gen(symbs)[:]
+        def __init__(self, expr):
+            self.expr = expr
+
+        def gen(self, symbs):
+            return self.expr.gen(symbs)[:]
 
     class _Rep1N:
-        def __init__(self, expr): self.expr = expr
-        def gen(self, symbs): return self.expr.gen(symbs)[1:]
+        def __init__(self, expr):
+            self.expr = expr
+
+        def gen(self, symbs):
+            return self.expr.gen(symbs)[1:]
 
     class _Rep01:
-        def __init__(self, expr): self.expr = expr
-        def gen(self, symbs): return self.expr.gen(symbs)[:1]
+        def __init__(self, expr):
+            self.expr = expr
+
+        def gen(self, symbs):
+            return self.expr.gen(symbs)[:1]
 
     class _RepSep0N:
-        def __init__(self, expr, sep): self.expr, self.sep = expr, sep
-        def gen(self, symbs): return self.expr.gen(symbs)[::self.sep.gen(symbs)]
+        def __init__(self, expr, sep):
+            self.expr, self.sep = expr, sep
+
+        def gen(self, symbs):
+            return self.expr.gen(symbs)[:: self.sep.gen(symbs)]
 
     class _RepSep1N:
-        def __init__(self, expr, sep): self.expr, self.sep = expr, sep
-        def gen(self, symbs): return self.expr.gen(symbs)[1::self.sep.gen(symbs)]
+        def __init__(self, expr, sep):
+            self.expr, self.sep = expr, sep
+
+        def gen(self, symbs):
+            return self.expr.gen(symbs)[1 :: self.sep.gen(symbs)]
 
     class _And:
-        def __init__(self, A, B): self.A, self.B = A, B
-        def gen(self, symbs): return self.A.gen(symbs) & self.B.gen(symbs)
+        def __init__(self, A, B):
+            self.A, self.B = A, B
+
+        def gen(self, symbs):
+            return self.A.gen(symbs) & self.B.gen(symbs)
 
     class _Or:
-        def __init__(self, A, B): self.A, self.B = A, B
-        def gen(self, symbs): return self.A.gen(symbs) | self.B.gen(symbs)
+        def __init__(self, A, B):
+            self.A, self.B = A, B
+
+        def gen(self, symbs):
+            return self.A.gen(symbs) | self.B.gen(symbs)
 
     class _Func:
-        def __init__(self, expr): self.expr = expr[1:-1]
-        def gen(self, symbs): return C(self.genpy(symbs))
-        def genpy(self, symbs): return symbs.eval(self.expr)
+        def __init__(self, expr):
+            self.expr = expr[1:-1]
+
+        def gen(self, symbs):
+            return C(self.genpy(symbs))
+
+        def genpy(self, symbs):
+            return symbs.eval(self.expr)
 
     class _Apply:
-        def __init__(self, expr, func): self.expr, self.func = expr, func
+        def __init__(self, expr, func):
+            self.expr, self.func = expr, func
+
         def gen(self, symbs):
             expr = self.expr.gen(symbs)
             func = self.func.genpy(symbs)
             return expr / func
 
     class _ApplyAll:
-        def __init__(self, expr, func): self.expr, self.func = expr, func
+        def __init__(self, expr, func):
+            self.expr, self.func = expr, func
+
         def gen(self, symbs):
             expr = self.expr.gen(symbs)
             func = self.func.genpy(symbs)
@@ -1128,7 +1241,10 @@ def _compile_string(source, frame):
 
     class _Rule:
         isaxiom = False
-        def __init__(self, ident, expr): self.ident, self.expr = ident, expr
+
+        def __init__(self, ident, expr):
+            self.ident, self.expr = ident, expr
+
         def gen(self, symbs):
             rule = symbs[self.ident.name]
             rule |= self.expr.gen(symbs)
@@ -1137,19 +1253,23 @@ def _compile_string(source, frame):
         isaxiom = True
 
     class _Separator(_Rule):
-        def __init__(self, expr): self.expr = expr
+        def __init__(self, expr):
+            self.expr = expr
+
         def gen(self, symbs):
             expr = self.expr.gen(symbs)
             Separator(expr).__enter__()
 
     class _Lexer(_Rule):
-        def __init__(self, opts): self.opts = opts
+        def __init__(self, opts):
+            self.opts = opts
+
         def gen(self, symbs):
             symbs.lexer = 0
             for opt in self.opts:
                 val = getattr(re, opt.name)
                 if not isinstance(val, int):
-                    raise TypeError("re.%s is not an integer"%opt)
+                    raise TypeError("re.%s is not an integer" % opt)
                 symbs.lexer |= val
 
     class _Symbs:
@@ -1158,18 +1278,24 @@ def _compile_string(source, frame):
             self.globals = frame.f_globals
             self.locals = frame.f_locals
             self.lexer = 0
-        def __iter__(self): return iter(self.symbs)
+
+        def __iter__(self):
+            return iter(self.symbs)
+
         def __getitem__(self, name):
             try:
                 s = self.symbs[name]
             except KeyError:
                 s = self.symbs[name] = Rule()
             return s
+
         def eval(self, expr):
             return eval(expr, self.globals, self.locals)
 
     class _Grammar:
-        def __init__(self, rules): self.rules = rules
+        def __init__(self, rules):
+            self.rules = rules
+
         def gen(self, frame):
             symbs = _Symbs(frame)
             separator = Separator(None)
@@ -1180,20 +1306,23 @@ def _compile_string(source, frame):
             finally:
                 separator.__exit__()
             empty = set(name for name in symbs if symbs[name].parser is None)
-            if empty: raise NameError("Undefined symbols: %s"%(", ".join(sorted(empty))))
+            if empty:
+                raise NameError("Undefined symbols: %s" % (", ".join(sorted(empty))))
             axioms = set(rule.ident.name for rule in self.rules if rule.isaxiom)
-            if len(axioms) == 0: raise NameError("No axiom")
-            if len(axioms) > 1: raise NameError("Too many axioms: %s"%(", ".join(axioms)))
+            if len(axioms) == 0:
+                raise NameError("No axiom")
+            if len(axioms) > 1:
+                raise NameError("Too many axioms: %s" % (", ".join(axioms)))
             return symbs[axioms.pop()]
 
-    ident = R(r'[a-z_]\w*', re.I, name='ident') / _Ident
+    ident = R(r"[a-z_]\w*", re.I, name="ident") / _Ident
     _string = """
         " [^"\\\n]* (?: \\. [^"\\\n]* )* "
     |   ' [^'\\\n]* (?: \\. [^'\\\n]* )* '
     """
-    regexpr = R(r'(?:(\w+)\.)?r(%s)'%_string, re.VERBOSE, name='regexpr') * _Re
-    string = R(r'(?:(\w+)\.)?(%s)'%_string, re.VERBOSE, name='string') * _Kw
-    func = R(r'''`[^`]+`''', name='func') / _Func
+    regexpr = R(r"(?:(\w+)\.)?r(%s)" % _string, re.VERBOSE, name="regexpr") * _Re
+    string = R(r"(?:(\w+)\.)?(%s)" % _string, re.VERBOSE, name="string") * _Kw
+    func = R(r"""`[^`]+`""", name="func") / _Func
 
     separator = Separator(r"\s+|#.*")
     separator.__enter__()
@@ -1203,40 +1332,45 @@ def _compile_string(source, frame):
         expr_rep = Rule()
         expr_func = Rule()
         option = Rule()
-        item = ident | regexpr | string | func | '(' & expr_or & ')' | '@' & C(_At())
-        expr_rep |= (item & '*') / _Rep0N
-        expr_rep |= (item & '+') / _Rep1N
-        expr_rep |= (item & '?') / _Rep01
-        expr_rep |= ('[' & expr_or & '/' & expr_or & ']' & '*') * _RepSep0N
-        expr_rep |= ('[' & expr_or & '/' & expr_or & ']' & '+') * _RepSep1N
+        item = ident | regexpr | string | func | "(" & expr_or & ")" | "@" & C(_At())
+        expr_rep |= (item & "*") / _Rep0N
+        expr_rep |= (item & "+") / _Rep1N
+        expr_rep |= (item & "?") / _Rep01
+        expr_rep |= ("[" & expr_or & "/" & expr_or & "]" & "*") * _RepSep0N
+        expr_rep |= ("[" & expr_or & "/" & expr_or & "]" & "+") * _RepSep1N
         expr_rep |= item
         expr_and |= (expr_rep & expr_and) * _And | expr_rep
-        expr_func |= (expr_and & '::' & func) * _ApplyAll | expr_and
-        expr_func |= (expr_and & ':' & func) * _Apply | expr_and
+        expr_func |= (expr_and & "::" & func) * _ApplyAll | expr_and
+        expr_func |= (expr_and & ":" & func) * _Apply | expr_and
         expr_func |= expr_and
-        expr_or |= (expr_func & '|' & expr_or) * _Or | expr_func
-        rule = (ident & '=' & expr_or & ';') * _Rule
-        axiom = '!' & (ident & '=' & expr_or & ';') * _Axiom
-        option |= (K('separator') & ':' & expr_or & ';') / _Separator
-        lexsep = K('') | ',' | '|' | '+'
-        option |= (K('lexer') & ':' & ident[::lexsep] & ';') / _Lexer
-        grammar = (axiom|rule|option)[:] / _Grammar
+        expr_or |= (expr_func & "|" & expr_or) * _Or | expr_func
+        rule = (ident & "=" & expr_or & ";") * _Rule
+        axiom = "!" & (ident & "=" & expr_or & ";") * _Axiom
+        option |= (K("separator") & ":" & expr_or & ";") / _Separator
+        lexsep = K("") | "," | "|" | "+"
+        option |= (K("lexer") & ":" & ident[::lexsep] & ";") / _Lexer
+        grammar = (axiom | rule | option)[:] / _Grammar
     finally:
         separator.__exit__()
 
     return grammar(source).gen(frame)
 
+
 def _exc():
-    exc = getattr(sys, 'exc_value', None)       # for Python 2.6
+    exc = getattr(sys, "exc_value", None)  # for Python 2.6
     if exc is None:
-        info = getattr(sys, 'exc_info', None)   # for Python 3.1
-        if info is not None: exc = info()[1]
+        info = getattr(sys, "exc_info", None)  # for Python 3.1
+        if info is not None:
+            exc = info()[1]
     if exc is None:
+
         class FakeExc:
             filename = ""
             lineno = 0
+
         exc = FakeExc()
     return exc
+
 
 def compile(source):
     frame = sys._getframe(1)
@@ -1244,6 +1378,7 @@ def compile(source):
         return _compile_string(source, frame)
     except SyntaxError:
         import os
+
         filename = frame.f_code.co_filename
         if os.path.isfile(filename):
             # Locate the grammar in the source
@@ -1253,8 +1388,9 @@ def compile(source):
                 # if found, update the filename and the error line number
                 err = _exc()
                 err.filename = filename
-                err.lineno += python_source[:index].count('\n')
+                err.lineno += python_source[:index].count("\n")
         raise
+
 
 def compile_file(filename):
     frame = sys._getframe(1)
@@ -1264,10 +1400,12 @@ def compile_file(filename):
         _exc().filename = filename
         raise
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     import doctest
+
     print(__license__.strip())
     failure_count, test_count = doctest.testmod(optionflags=doctest.ELLIPSIS)
     if failure_count == 0:
-        print("*"*70)
-        print("All %d tests succeeded"%test_count)
+        print("*" * 70)
+        print("All %d tests succeeded" % test_count)
