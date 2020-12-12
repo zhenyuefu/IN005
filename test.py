@@ -9,4 +9,5 @@ from transition import Transition
 from parser import *
 
 automate = Automate.creationAutomate("exempleAutomate.txt")
-automate.show("exempleAutomate")
+new_auto = Automate.completeAutomate(automate, "abc")
+new_auto.show("exempleAutomate")
