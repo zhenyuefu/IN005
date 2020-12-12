@@ -30,7 +30,7 @@ class Automate(AutomateBase):
         successeurs = []
         for state in listStates:
             for t in self.getListTransitionsFrom(state):
-                if t.etiquette == lettre and t.stateDest not in listStates:
+                if t.etiquette == lettre and t.stateDest not in successeurs:
                     successeurs.append(t.stateDest)
         return successeurs
 
@@ -127,7 +127,58 @@ class Automate(AutomateBase):
         """Automate  -> Automate
         rend l'automate déterminisé d'auto
         """
-        return
+        list_init = auto.getListInitialStates()
+        list_etiquette = auto.getAlphabetFromTransitions()
+        list_states_DFA_from_NFA = [list_init]
+        list_states_DFA = [State(0, True, False, label=str(list_init))]
+        list_states = list_init
+        list_transitions = []
+        i = 0
+        while True:
+            list_next = []
+            for ch in list_etiquette:
+                list_temp = auto.succ(list_states, ch)
+                if list_temp not in list_states_DFA_from_NFA:
+                    add = False
+                    for state in list_temp:
+                        if state.fin:
+                            i += 1
+                            list_states_DFA.append(
+                                State(i, False, True, label=str(list_temp))
+                            )
+                            add = True
+                            break
+                    if not add:
+                        i += 1
+                        list_states_DFA.append(
+                            State(i, False, False, label=str(list_temp))
+                        )
+                    list_transitions.append(
+                        Transition(
+                            list_states_DFA[
+                                list_states_DFA_from_NFA.index(list_states)
+                            ],
+                            ch,
+                            list_states_DFA[i],
+                        )
+                    )
+                    list_states_DFA_from_NFA.append(list_temp)
+                    list_next = list_temp
+                else:
+                    list_transitions.append(
+                        Transition(
+                            list_states_DFA[
+                                list_states_DFA_from_NFA.index(list_states)
+                            ],
+                            ch,
+                            list_states_DFA[list_states_DFA_from_NFA.index(list_temp)],
+                        )
+                    )
+            if list_next == []:
+                break
+            list_states = list_next
+        new_auto = Automate(list_transitions)
+        return new_auto
 
     @staticmethod
     def complementaire(auto, alphabet):
