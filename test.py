@@ -9,5 +9,5 @@ from transition import Transition
 from parser import *
 
 automate = Automate.creationAutomate("exempleAutomate.txt")
-automate = Automate.determinisation(automate)
-automate.show("exempleAutomate")
+automate2 = Automate.determinisation(automate)
+automate2.show("exempleAutomate")

@@ -134,8 +134,8 @@ class Automate(AutomateBase):
         list_states = list_init
         list_transitions = []
         i = 0
+        list_next = []
         while True:
-            list_next = []
             for ch in list_etiquette:
                 list_temp = auto.succ(list_states, ch)
                 if list_temp not in list_states_DFA_from_NFA:
@@ -163,7 +163,7 @@ class Automate(AutomateBase):
                         )
                     )
                     list_states_DFA_from_NFA.append(list_temp)
-                    list_next = list_temp
+                    list_next.append(list_temp)
                 else:
                     list_transitions.append(
                         Transition(
@@ -176,7 +176,9 @@ class Automate(AutomateBase):
                     )
             if list_next == []:
                 break
-            list_states = list_next
+            list_states = list_next[0]
+            del list_next[0]
+        print(list_states_DFA_from_NFA)
         new_auto = Automate(list_transitions)
         return new_auto
 
