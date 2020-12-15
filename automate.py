@@ -178,7 +178,6 @@ class Automate(AutomateBase):
                 break
             list_states = list_next[0]
             del list_next[0]
-        print(list_states_DFA_from_NFA)
         new_auto = Automate(list_transitions)
         return new_auto
 
