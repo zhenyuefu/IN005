@@ -131,6 +131,10 @@ class Automate(AutomateBase):
         list_etiquette = auto.getAlphabetFromTransitions()
         list_states_DFA_from_NFA = [list_init]
         list_states_DFA = [State(0, True, False, label=str(list_init))]
+        for state in list_init:
+            if state in auto.getListFinalStates():
+                list_states_DFA = [State(0, True, True, label=str(list_init))]
+                break
         list_states = list_init
         list_transitions = []
         i = 0
