@@ -359,4 +359,14 @@ class Automate(AutomateBase):
         """Automate  -> Automate
         rend l'automate acceptant pour langage l'étoile du langage de a
         """
-        return
+        auto_etoile = copy.deepcopy(auto)
+        list_final = auto_etoile.getListFinalStates()
+        list_init = auto_etoile.getListInitialStates()
+        auto_etoile.addState(State(-1, True, True, label="ε"))
+        for trans in auto_etoile.listTransitions:
+            if trans.stateDest in list_final:
+                for state in list_init:
+                    auto_etoile.addTransition(
+                        Transition(trans.stateSrc, trans.etiquette, state)
+                    )
+        return auto_etoile
