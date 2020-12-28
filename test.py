@@ -8,15 +8,10 @@ from state import State
 from transition import Transition
 from parser import *
 
-list_states = [State(0, True, False), State(1, False, False)]
-automate = Automate.creationAutomate("exempleAutomate.txt")
-automate.show("example")
-acc = Automate.creationAutomate("Fichiers de test/testAcc.txt")
-acc.show("Accept")
-compl = Automate.creationAutomate("Fichiers de test/testCompl.txt")
-compl.show("complet")
-automate2 = Automate.determinisation(automate)
-automate2.show("det")
 
-print(automate.succ(list_states, "a"))
-print(Automate.estComplet(compl, "ab"))
+i1 = Automate.creationAutomate("Fichiers de test/i1")
+i1.show("u1")
+i2 = Automate.creationAutomate("Fichiers de test/i2")
+c = Automate.concatenation(i1, i2)
+c.show("con")
+i2.show("u2")
